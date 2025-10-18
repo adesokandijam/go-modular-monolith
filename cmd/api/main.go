@@ -2,15 +2,20 @@ package main
 
 import (
 	"database/sql"
+	"dijam-ecommerce/internal/product"
+	productHTTPHandler "dijam-ecommerce/internal/product/http"
+	productRepository "dijam-ecommerce/internal/product/repository"
 	users "dijam-ecommerce/internal/user"
 	userHTTPHandler "dijam-ecommerce/internal/user/http"
 	"dijam-ecommerce/internal/user/repository"
+	"dijam-ecommerce/pkg/middleware"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -28,6 +33,12 @@ type dbConfig struct {
 	maxOpenConns int
 }
 
+type config struct {
+	dbconfig       dbConfig
+	accessTokenTTL time.Duration
+	jwtSecret      []byte
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -42,7 +53,9 @@ func main() {
 	dbCfg.username = os.Getenv("DB_USER")
 	dbCfg.password = os.Getenv("DB_PASSWORD")
 	dbCfg.sslmode = os.Getenv("DB_SSLMODE")
-
+	var cfg config
+	cfg.dbconfig = dbCfg
+	cfg.jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 	// Convert string values from .env to integers
 	dbCfg.port, err = strconv.Atoi(os.Getenv("DB_PORT"))
 	if err != nil {
@@ -58,6 +71,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error parsing DB_MAX_OPEN_CONNS: %v", err)
 	}
+	intAccessTokenTTL, err := strconv.Atoi(os.Getenv("ACCESS_TOKEN_TTL"))
+	if err != nil {
+		log.Fatalf("Error parsing ACCESS_TOKEN_TTL: %v", err)
+	}
+
+	cfg.accessTokenTTL = time.Duration(intAccessTokenTTL)
 
 	fmt.Printf("Loaded config: %+v\n", dbCfg)
 
@@ -65,17 +84,24 @@ func main() {
 	if err != nil {
 		log.Fatalf("error connecting to the db: %e", err)
 	}
-	postgresRepo := repository.NewPostgresRepository(db)
-	userService := users.NewUserService(postgresRepo)
 	validator := validator.New()
+
+	userPostgresRepo := repository.NewUserPostgresRepository(db)
+	userService := users.NewUserService(userPostgresRepo, cfg.jwtSecret, cfg.accessTokenTTL)
 	handler := userHTTPHandler.NewHandler(userService, validator)
+
+	productPostgresRepo := productRepository.NewProductRepository(db)
+	productService := product.NewProductService(productPostgresRepo)
+	productHandler := productHTTPHandler.NewProductHTTPHandler(productService, validator)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/vi/users/register", handler.Register)
 	mux.HandleFunc("POST /api/vi/users/login", handler.Login)
+	mux.HandleFunc("POST /api/vi/products/list", productHandler.ListProduct)
 	mux.HandleFunc("GET /api/vi/health", healthCheck)
 
 	slog.Info("Server starting on port 8080")
-	err = http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(":8080", middleware.LogRequestMetrics(mux))
 	log.Fatal(err)
 }
 

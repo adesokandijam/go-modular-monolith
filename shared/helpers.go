@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 func WriteToJSON(w http.ResponseWriter, status int, data Envelope, headers http.Header) error {
@@ -52,4 +54,25 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 
 	}
 	return nil
+}
+
+func QueryReadString(qs url.Values, key string, defaultValue string) string {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+	return s
+}
+
+func QueryReadInt(qs url.Values, key string, defaultValue int64) int64 {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultValue
+	}
+
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return defaultValue
+	}
+	return int64(i)
 }

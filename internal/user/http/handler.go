@@ -99,15 +99,23 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Login(r.Context(), req.Email, req.Password)
+	token, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		if errors.Is(err, users.ErrInvalidCredentials) {
+		switch {
+		case errors.Is(err, users.ErrInvalidCredentials):
 			apierrors.Unauthorized(w, r, err)
 			return
+		case errors.Is(err, users.ErrInvalidToken):
+			apierrors.Unauthorized(w, r, err)
+			return
+		case errors.Is(err, users.ErrExpiredToken):
+			apierrors.Unauthorized(w, r, err)
+			return
+		default:
+			apierrors.ServerError(w, r, err)
+			return
 		}
-		apierrors.ServerError(w, r, err)
-		return
 	}
 
-	_ = shared.WriteToJSON(w, http.StatusCreated, shared.Envelope{"message": "user successfully logged in"}, nil)
+	_ = shared.WriteToJSON(w, http.StatusCreated, shared.Envelope{"message": "user successfully logged in", "token": token}, nil)
 }

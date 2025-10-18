@@ -7,19 +7,19 @@ import (
 	"fmt"
 )
 
-type PostgresRepository struct {
+type UserPostgresRepository struct {
 	DB *sql.DB
 }
 
-var _ users.UserRepository = (*PostgresRepository)(nil)
+var _ users.UserRepository = (*UserPostgresRepository)(nil)
 
-func NewPostgresRepository(db *sql.DB) *PostgresRepository {
-	return &PostgresRepository{
+func NewUserPostgresRepository(db *sql.DB) *UserPostgresRepository {
+	return &UserPostgresRepository{
 		DB: db,
 	}
 }
 
-func (p *PostgresRepository) Save(ctx context.Context, user *users.User) error {
+func (p *UserPostgresRepository) Save(ctx context.Context, user *users.User) error {
 	query := `INSERT into users (id, name, email, password_hash)
 			VALUES($1,$2,$3,$4);
 			`
@@ -36,7 +36,7 @@ func (p *PostgresRepository) Save(ctx context.Context, user *users.User) error {
 	return nil
 }
 
-func (p *PostgresRepository) FindByEmail(ctx context.Context, email string) (*users.User, error) {
+func (p *UserPostgresRepository) FindByEmail(ctx context.Context, email string) (*users.User, error) {
 	var user users.User
 	query := `SELECT email, name, password_hash FROM users
 			WHERE email = $1`
@@ -49,7 +49,7 @@ func (p *PostgresRepository) FindByEmail(ctx context.Context, email string) (*us
 	return &user, nil
 }
 
-func (p *PostgresRepository) Login(ctx context.Context, email, passwordHash string) (*users.User, error) {
+func (p *UserPostgresRepository) Login(ctx context.Context, email, passwordHash string) (*users.User, error) {
 
 	return nil, nil
 }

@@ -12,9 +12,8 @@ func logError(r *http.Request, err error, message string, details ...any) {
 	}
 
 	args = append(args, details...)
-	slog.Error(message, args)
+	slog.Error(message, "info", args)
 }
-
 
 func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 	logError(r, err, "internal server error")
