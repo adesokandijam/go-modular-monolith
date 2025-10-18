@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"dijam-ecommerce/internal/user"
+	users "dijam-ecommerce/internal/user"
 	userHTTPHandler "dijam-ecommerce/internal/user/http"
 	"dijam-ecommerce/internal/user/repository"
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -65,8 +66,9 @@ func main() {
 		log.Fatalf("error connecting to the db: %e", err)
 	}
 	postgresRepo := repository.NewPostgresRepository(db)
-	userService := user.NewUserService(postgresRepo)
-	handler := userHTTPHandler.NewHandler(userService)
+	userService := users.NewUserService(postgresRepo)
+	validator := validator.New()
+	handler := userHTTPHandler.NewHandler(userService, validator)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/vi/users/register", handler.Register)
 	mux.HandleFunc("POST /api/vi/users/login", handler.Login)

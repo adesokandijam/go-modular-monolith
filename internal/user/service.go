@@ -1,16 +1,13 @@
-package user
+package users
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var ErrDuplicateEmail = errors.New("email already in use")
 
 type UserService struct {
 	repo UserRepository
@@ -52,7 +49,7 @@ func (s *UserService) Login(ctx context.Context, email, password string) error {
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return fmt.Errorf("unable to login user: %w", err)
+		return ErrInvalidCredentials
 	}
 	return nil
 
