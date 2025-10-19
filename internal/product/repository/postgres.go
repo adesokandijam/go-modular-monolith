@@ -6,6 +6,7 @@ import (
 	"dijam-ecommerce/internal/product"
 	"dijam-ecommerce/shared"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -65,9 +66,14 @@ func (r *ProductPostgresRepository) FindByID(ctx context.Context, id uuid.UUID) 
 }
 
 func (r *ProductPostgresRepository) List(ctx context.Context, category string, filters shared.ProductFilters) ([]*product.Product, product.ProductMetadata, error) {
-
+	var totalRecords int64
+	countQuery := `SELECT count(*) FROM products WHERE (LOWER(category) = LOWER($1) OR $1 = '')`
+	err := r.DB.QueryRowContext(ctx, countQuery, category).Scan(&totalRecords)
+	if err != nil {
+		return nil, product.ProductMetadata{}, fmt.Errorf("postgres: could not count products: %w", err)
+	}
 	query := fmt.Sprintf(
-		`SELECT count(*) OVER(), id, name, description, price_in_pence, currency, stock_quantity, category, created_at, updated_at
+		`SELECT id, name, description, price_in_pence, currency, stock_quantity, category, created_at, updated_at
          FROM products 
          WHERE (LOWER(category) = LOWER($1) OR $1 = '')
          ORDER BY %s %s, id ASC
@@ -76,19 +82,19 @@ func (r *ProductPostgresRepository) List(ctx context.Context, category string, f
 		filters.SortColumns(),
 		filters.SortDirection(),
 	)
-
+	start := time.Now()
 	rows, err := r.DB.QueryContext(ctx, query, category, filters.Limit(), filters.Offset())
 	if err != nil {
 		return nil, product.ProductMetadata{}, fmt.Errorf("postgres: could not query products: %w", err)
 	}
 	defer rows.Close()
-	totalRecords := 0
+	fmt.Println(time.Since(start))
+	// fmt.Println(start)
 
 	var productList = make([]*product.Product, 0)
 	for rows.Next() {
 		p := &product.Product{}
 		err := rows.Scan(
-			&totalRecords,
 			&p.ID,
 			&p.Name,
 			&p.Description,
@@ -104,7 +110,6 @@ func (r *ProductPostgresRepository) List(ctx context.Context, category string, f
 		}
 		productList = append(productList, p)
 	}
-
 	metadata := calculateProductMetadata(int64(totalRecords), filters.Page, filters.PageSize)
 	return productList, metadata, nil
 }

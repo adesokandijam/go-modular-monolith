@@ -72,11 +72,12 @@ func (h *ProductHTTPHandler) ListProduct(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	products, metadata, err := h.ProductService.List(r.Context(), input.Category, input.Filters)
+	// products, metadata, err := h.ProductService.List(r.Context(), input.Category, input.Filters)
+	_, _, err = h.ProductService.List(r.Context(), input.Category, input.Filters)
 	if err != nil {
 		apierrors.ServerError(w, r, err)
 		return
 	}
 	// fmt.Fprintf(w, "%+v\n", input)
-	shared.WriteToJSON(w, http.StatusOK, shared.Envelope{"message": "successfully retrieved products", "metadata": metadata, "products": products}, nil)
+	// shared.WriteToJSON(w, http.StatusOK, shared.Envelope{"message": "successfully retrieved products", "metadata": metadata, "products": products}, nil)
 }

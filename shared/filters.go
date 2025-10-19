@@ -4,7 +4,7 @@ import "strings"
 
 type ProductFilters struct {
 	Sort     string `validate:"oneof=name -name price_in_pence -price_in_pence created_at -created_at stock_quantity -stock_quantity"`
-	PageSize int64  `validate:"gte=1,lte=100"`
+	PageSize int64  `validate:"gte=1,lte=50"`
 	Page     int64  `validate:"gte=1"`
 }
 
